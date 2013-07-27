@@ -36,11 +36,6 @@
             <artifactId>craftbukkit</artifactId>
             <version>LATEST</version>
         </dependency>
-        <dependency>
-            <groupId>com.comphenix.protocol</groupId>
-            <artifactId>ProtocolLib</artifactId>
-            <version>LATEST</version>
-        </dependency>
     </dependencies>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
