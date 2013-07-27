@@ -1,6 +1,5 @@
 package com.cnaude.chairs;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -8,23 +7,17 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event.Result;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
-import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.material.Directional;
 import org.bukkit.material.Stairs;
 import org.bukkit.material.Step;
 import org.bukkit.material.WoodenStep;
 import org.bukkit.permissions.Permission;
 import org.bukkit.permissions.PermissionDefault;
-
-import java.util.ArrayList;
+import org.bukkit.util.Vector;
 
 public class EventListener implements Listener {
 
@@ -36,62 +29,6 @@ public class EventListener implements Listener {
         this.ignoreList = ignoreList;
     }
 
-
-    @EventHandler
-    public void onPlayerMove(PlayerMoveEvent event) {
-        Player player = event.getPlayer();
-        String pname = player.getName();
-        if (!plugin.sit.containsKey(player.getName())) return;
-        Location from = player.getLocation();
-        Location to = plugin.sit.get(pname);
-        if (from.getWorld() == to.getWorld()) {
-            if (from.distance(to) > 1.5) plugin.sendStand(player);
-            else plugin.sendSit(player);
-        } else plugin.sendStand(player);
-    }
-
-    @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event) {
-        delayedSitTask();
-    }
-
-    @EventHandler
-    public void onPlayerTeleport(PlayerTeleportEvent event) {
-        delayedSitTask();
-    }
-
-    private void delayedSitTask() {
-        plugin.getServer().getScheduler().runTaskLater(plugin, new Runnable() {
-            @Override
-            public void run() {
-                plugin.sendSit();
-            }
-        }, 20);
-    }
-
-    @EventHandler
-    public void onPlayerQuit(PlayerQuitEvent event) {
-        Player player = event.getPlayer();
-        if (!plugin.sit.containsKey(player.getName())) return;
-        plugin.sendStand(player);
-        Location loc = player.getLocation().clone();
-        loc.setY(loc.getY() + 1);
-        player.teleport(loc, PlayerTeleportEvent.TeleportCause.PLUGIN);
-    }
-
-    @EventHandler
-    public void onBlockDestroy(BlockBreakEvent event) {
-        Block block = event.getBlock();
-        if (plugin.sit.isEmpty()) return;
-        ArrayList<String> standList = new ArrayList<String>();
-        for (String s : plugin.sit.keySet()) if (plugin.sit.get(s).equals(block.getLocation())) standList.add(s);
-        for (String s : standList) {
-            Player player = Bukkit.getPlayer(s);
-            plugin.sendStand(player);
-        }
-        standList.clear();
-    }
-
     public boolean isValidChair(Block block) {
         for (ChairBlock cb : plugin.allowedBlocks) if (cb.getMat().equals(block.getType())) return true;
         return false;
@@ -99,6 +36,7 @@ public class EventListener implements Listener {
 
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
+        Player player = event.getPlayer();
         if (event.getPlayer().getItemInHand().getType().isBlock() && (event.getPlayer().getItemInHand().getTypeId() != 0) && plugin.ignoreIfBlockInHand)
             return;
         if (!event.hasBlock() || event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
@@ -108,8 +46,6 @@ public class EventListener implements Listener {
         WoodenStep wStep = null;
         double sh = plugin.sittingHeight;
         boolean blockOkay = false;
-
-        Player player = event.getPlayer();
         if (ignoreList.isIgnored(player.getName()) || plugin.permissions && !player.hasPermission("chairs.sit")) return;
         if (plugin.perItemPerms) {
             if (plugin.pm.getPermission("chairs.sit." + block.getTypeId()) == null) {
@@ -163,11 +99,10 @@ public class EventListener implements Listener {
                 return;
 
             // Check if player is sitting.
-            if (plugin.sit.containsKey(event.getPlayer().getName())) {
+            if (plugin.sit.containsKey(player.getName())) {
                 plugin.sit.remove(player.getName());
                 event.setCancelled(true);
                 if (plugin.notifyplayer && !plugin.msgStanding.isEmpty()) player.sendMessage(plugin.msgStanding);
-                plugin.sendStand(player);
                 return;
             }
 
@@ -216,38 +151,42 @@ public class EventListener implements Listener {
                     }
                 }
 
-                if (player.getVehicle() != null) player.getVehicle().remove();
+                Location chairLoc = event.getClickedBlock().getLocation().add(0.5, 0, 0.5);
 
                 if (plugin.autoRotate && stairs != null) {
-                    Location plocation = block.getLocation().clone();
-                    plocation.add(0.5D, (sh - 0.5D), 0.5D);
-                    switch (stairs.getDescendingDirection()) {
-                        case NORTH:
-                            plocation.setYaw(180);
-                            break;
-                        case EAST:
-                            plocation.setYaw(-90);
-                            break;
-                        case SOUTH:
-                            plocation.setYaw(0);
-                            break;
-                        case WEST:
-                            plocation.setYaw(90);
-                    }
-                    player.teleport(plocation);
+                    BlockFace direction = ((Directional) event.getClickedBlock().getState().getData()).getFacing();
+                    double dx = direction.getModX();
+                    double dy = direction.getModY();
+                    double dz = direction.getModZ();
+                    if (dx != 0) {
+                        if (dx < 0) chairLoc.setYaw((float) (1.5 * Math.PI));
+                        else chairLoc.setYaw((float) (0.5 * Math.PI));
+                        chairLoc.setYaw((float) (chairLoc.getYaw() - Math.atan(dz / dx)));
+                    } else if (dz < 0) chairLoc.setYaw((float) Math.PI);
+                    double dxz = Math.sqrt(Math.pow(dx, 2) + Math.pow(dz, 2));
+                    chairLoc.setPitch((float) -Math.atan(dy / dxz));
+                    chairLoc.setYaw(-chairLoc.getYaw() * 180f / (float) Math.PI);
+                    chairLoc.setPitch(chairLoc.getPitch() * 180f / (float) Math.PI);
                 } else {
-                    Location plocation = block.getLocation().clone();
-                    plocation.setYaw(player.getLocation().getYaw());
-                    player.teleport(plocation.add(0.5D, (sh - 0.5D), 0.5D));
+                    chairLoc.setPitch(player.getPlayer().getLocation().getPitch());
+                    chairLoc.setYaw(player.getPlayer().getLocation().getYaw());
                 }
-                player.setSneaking(true);
+                //player.setSneaking(true);
                 if (plugin.notifyplayer && !plugin.msgSitting.isEmpty()) player.sendMessage(plugin.msgSitting);
-                plugin.sit.put(player.getName(), block.getLocation());
-                event.setUseInteractedBlock(Result.DENY);
-
-                delayedSitTask();
+                player.getPlayer().teleport(chairLoc);
+                Entity ar = block.getWorld().spawnArrow(getBlockCentre(block).subtract(0, 0.5, 0), new Vector(0, 0, 0), 0, 0);
+                player.setSneaking(false);
+                ar.setPassenger(player);
+                ar.setTicksLived(1);
+                plugin.sit.put(player.getName(), ar);
+                event.setCancelled(true);
             }
         }
+    }
+
+    // https://github.com/sk89q/craftbook/blob/master/src/main/java/com/sk89q/craftbook/util/BlockUtil.java
+    public static Location getBlockCentre(Block block) {
+        return block.getLocation().add(0.5, 0.5, 0.5);
     }
 
     private int getChairWidth(Block block, BlockFace face) {
