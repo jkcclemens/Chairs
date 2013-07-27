@@ -4,12 +4,6 @@ import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.WrappedDataWatcher;
-import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import net.minecraft.server.v1_6_R2.Packet40EntityMetadata;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -21,6 +15,13 @@ import org.bukkit.permissions.Permission;
 import org.bukkit.permissions.PermissionDefault;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Chairs extends JavaPlugin {
     private static Chairs instance = null;
@@ -36,14 +37,14 @@ public class Chairs extends JavaPlugin {
     public int sitHealthPerInterval;
     public int sitEffectInterval;
     private File pluginFolder;
-    private File configFile;    
+    private File configFile;
     public byte sitByte;
     public HashMap<String, Location> sit = new HashMap<String, Location>();
     public static final String PLUGIN_NAME = "Chairs";
     public static final String LOG_HEADER = "[" + PLUGIN_NAME + "]";
     static final Logger log = Logger.getLogger("Minecraft");
     public PluginManager pm;
-    public static ChairsIgnoreList ignoreList; 
+    public static ChairsIgnoreList ignoreList;
     public String msgSitting, msgStanding, msgOccupied, msgNoPerm, msgReloaded, msgDisabled, msgEnabled;
     private ProtocolManager protocolManager;
 
@@ -68,9 +69,7 @@ public class Chairs extends JavaPlugin {
         if (isProtocolLibLoaded()) {
             logInfo("ProtocolLib detected.");
             protocolManager = ProtocolLibrary.getProtocolManager();
-        } else {
-            logInfo("ProtocolLib not detected. Using NMS code methods instead.");
-        }
+        } else logInfo("ProtocolLib not detected. Using NMS code methods instead.");
     }
 
     @Override
@@ -80,20 +79,14 @@ public class Chairs extends JavaPlugin {
             Location loc = player.getLocation().clone();
             loc.setY(loc.getY() + 1);
             player.teleport(loc, PlayerTeleportEvent.TeleportCause.PLUGIN);
-            
+
         }
-        if (ignoreList != null) {
-            ignoreList.save();
-        }
-        if (chairEffects != null) {
-            chairEffects.cancel();     
-        }
+        if (ignoreList != null) ignoreList.save();
+        if (chairEffects != null) chairEffects.cancel();
     }
-    
+
     public void restartEffectsTask() {
-        if (chairEffects != null) {
-            chairEffects.restart();
-        }
+        if (chairEffects != null) chairEffects.restart();
     }
 
     private void createConfig() {
@@ -101,7 +94,7 @@ public class Chairs extends JavaPlugin {
             try {
                 pluginFolder.mkdir();
             } catch (Exception e) {
-                logInfo("ERROR: " + e.getMessage());                
+                logInfo("ERROR: " + e.getMessage());
             }
         }
 
@@ -113,12 +106,12 @@ public class Chairs extends JavaPlugin {
             }
         }
     }
-    
+
     public boolean isProtocolLibLoaded() {
-        return (getServer().getPluginManager().getPlugin("ProtocolLib") != null);
+        return getServer().getPluginManager().getPlugin("ProtocolLib") != null;
     }
 
-    public void loadConfig() {     
+    public void loadConfig() {
         sitByte = Byte.parseByte(getConfig().getString("packet"));
         logInfo("Sitting packet byte: " + sitByte);
         autoRotate = getConfig().getBoolean("auto-rotate");
@@ -136,19 +129,19 @@ public class Chairs extends JavaPlugin {
         perItemPerms = getConfig().getBoolean("per-item-perms");
         opsOverridePerms = getConfig().getBoolean("ops-override-perms");
         ignoreIfBlockInHand = getConfig().getBoolean("ignore-if-block-in-hand");
-        
+
         sitEffectsEnabled = getConfig().getBoolean("sit-effects.enabled", false);
-        sitEffectInterval = getConfig().getInt("sit-effects.interval",20);
-        sitMaxHealth = getConfig().getInt("sit-effects.healing.max-percent",100);
-        sitHealthPerInterval = getConfig().getInt("sit-effects.healing.amount",1);
-        
-        msgSitting = ChatColor.translateAlternateColorCodes('&',getConfig().getString("messages.sitting"));
-        msgStanding = ChatColor.translateAlternateColorCodes('&',getConfig().getString("messages.standing"));
-        msgOccupied = ChatColor.translateAlternateColorCodes('&',getConfig().getString("messages.occupied"));
-        msgNoPerm = ChatColor.translateAlternateColorCodes('&',getConfig().getString("messages.no-permission"));
-        msgEnabled = ChatColor.translateAlternateColorCodes('&',getConfig().getString("messages.enabled"));
-        msgDisabled = ChatColor.translateAlternateColorCodes('&',getConfig().getString("messages.disabled"));
-        msgReloaded = ChatColor.translateAlternateColorCodes('&',getConfig().getString("messages.reloaded"));
+        sitEffectInterval = getConfig().getInt("sit-effects.interval", 20);
+        sitMaxHealth = getConfig().getInt("sit-effects.healing.max-percent", 100);
+        sitHealthPerInterval = getConfig().getInt("sit-effects.healing.amount", 1);
+
+        msgSitting = ChatColor.translateAlternateColorCodes('&', getConfig().getString("messages.sitting"));
+        msgStanding = ChatColor.translateAlternateColorCodes('&', getConfig().getString("messages.standing"));
+        msgOccupied = ChatColor.translateAlternateColorCodes('&', getConfig().getString("messages.occupied"));
+        msgNoPerm = ChatColor.translateAlternateColorCodes('&', getConfig().getString("messages.no-permission"));
+        msgEnabled = ChatColor.translateAlternateColorCodes('&', getConfig().getString("messages.enabled"));
+        msgDisabled = ChatColor.translateAlternateColorCodes('&', getConfig().getString("messages.disabled"));
+        msgReloaded = ChatColor.translateAlternateColorCodes('&', getConfig().getString("messages.reloaded"));
 
         allowedBlocks = new ArrayList<ChairBlock>();
         for (String s : getConfig().getStringList("allowed-blocks")) {
@@ -156,50 +149,48 @@ public class Chairs extends JavaPlugin {
             double sh = sittingHeight;
             String d = "0";
             if (s.contains(":")) {
-                String tmp[] = s.split(":",3);
-                type = tmp[0];                 
+                String tmp[] = s.split(":", 3);
+                type = tmp[0];
                 if (!tmp[1].isEmpty()) {
                     sh = Double.parseDouble(tmp[1]);
-                }                
+                }
                 if (tmp.length == 3) {
                     d = tmp[2];
                 }
             } else {
-                type = s;                
+                type = s;
             }
-            try {                
+            try {
                 Material mat;
                 if (type.matches("\\d+")) {
                     mat = Material.getMaterial(Integer.parseInt(type));
                 } else {
                     mat = Material.matchMaterial(type);
                 }
-                if (mat != null) {                    
+                if (mat != null) {
                     logInfo("Allowed block: " + mat.toString() + " => " + sh + " => " + d);
-                    allowedBlocks.add(new ChairBlock(mat,sh,d));
+                    allowedBlocks.add(new ChairBlock(mat, sh, d));
                 } else {
                     logError("Invalid block: " + type);
                 }
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 logError(e.getMessage());
             }
         }
-        
-        validSigns = new ArrayList<Material>();    
-        for (String type : getConfig().getStringList("valid-signs")) {            
+
+        validSigns = new ArrayList<Material>();
+        for (String type : getConfig().getStringList("valid-signs")) {
             try {
                 if (type.matches("\\d+")) {
                     validSigns.add(Material.getMaterial(Integer.parseInt(type)));
                 } else {
                     validSigns.add(Material.matchMaterial(type));
                 }
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 logError(e.getMessage());
             }
         }
-        
+
         ArrayList<String> perms = new ArrayList<String>();
         perms.add("chairs.sit");
         perms.add("chairs.reload");
@@ -216,92 +207,84 @@ public class Chairs extends JavaPlugin {
         } else {
             pd = PermissionDefault.FALSE;
         }
-        
-        pm.addPermission(new Permission("chairs.sit","Allow player to sit on a block.",pd));
-        pm.addPermission(new Permission("chairs.reload","Allow player to reload the Chairs configuration.",pd));
-        pm.addPermission(new Permission("chairs.self","Allow player to self disable or enable sitting.",pd));
-    } 
-    
+
+        pm.addPermission(new Permission("chairs.sit", "Allow player to sit on a block.", pd));
+        pm.addPermission(new Permission("chairs.reload", "Allow player to reload the Chairs configuration.", pd));
+        pm.addPermission(new Permission("chairs.self", "Allow player to self disable or enable sitting.", pd));
+    }
+
     private PacketContainer getSitPacket(Player p) {
-        PacketContainer fakeSit = protocolManager.createPacket(40); 
+        PacketContainer fakeSit = protocolManager.createPacket(40);
         fakeSit.getSpecificModifier(int.class).write(0, p.getEntityId());
         WrappedDataWatcher watcher = new WrappedDataWatcher();
-        watcher.setObject(0, sitByte);           
+        watcher.setObject(0, sitByte);
         fakeSit.getWatchableCollectionModifier().write(0, watcher.getWatchableObjects());
         return fakeSit;
     }
-    
+
     private PacketContainer getStandPacket(Player p) {
-        PacketContainer fakeSit = protocolManager.createPacket(40);   
+        PacketContainer fakeSit = protocolManager.createPacket(40);
         fakeSit.getSpecificModifier(int.class).write(0, p.getEntityId());
         WrappedDataWatcher watcher = new WrappedDataWatcher();
-        watcher.setObject(0, (byte)0);                
-        fakeSit.getWatchableCollectionModifier().write(0, watcher.getWatchableObjects());         
+        watcher.setObject(0, (byte) 0);
+        fakeSit.getWatchableCollectionModifier().write(0, watcher.getWatchableObjects());
         return fakeSit;
     }
-    
+
     // Send sit packet to all online players that are on same world and can see player
-    public void sendSit(Player p) {              
+    public void sendSit(Player p) {
         if (protocolManager != null) {
-            sendPacketToPlayers(getSitPacket(p),p);
-        } else {            
-            sendPacketToPlayers(new Packet40EntityMetadata(p.getPlayer().getEntityId(), new ChairWatcher(sitByte), true),p);                        
+            sendPacketToPlayers(getSitPacket(p), p);
+        } else {
+            sendPacketToPlayers(new Packet40EntityMetadata(p.getPlayer().getEntityId(), new ChairWatcher(sitByte), true), p);
         }
-    }                   
-    
+    }
+
     private void sendPacketToPlayers(PacketContainer pc, Player p) {
         for (Player onlinePlayer : getServer().getOnlinePlayers()) {
-            if (onlinePlayer.canSee(p)) {
-                if (onlinePlayer.getWorld().equals(p.getWorld())) {
-                    try {         
-                        protocolManager.sendServerPacket(onlinePlayer, pc);                                    
-                    } catch (Exception ex) {
-                        // Nothing here
-                    }
-                }
+            if (!onlinePlayer.canSee(p)) continue;
+            if (!onlinePlayer.getWorld().equals(p.getWorld())) continue;
+            try {
+                protocolManager.sendServerPacket(onlinePlayer, pc);
+            } catch (Exception ex) {
+                // Nothing here
             }
         }
     }
-    
+
     private void sendPacketToPlayers(Packet40EntityMetadata packet, Player p) {
         for (Player onlinePlayer : getServer().getOnlinePlayers()) {
-            if (onlinePlayer.canSee(p)) {
-                if (onlinePlayer.getWorld().equals(p.getWorld())) {
-                    try {         
-                        ((CraftPlayer) p).getHandle().playerConnection.sendPacket(packet);
-                    } catch (Exception ex) {
-                        // Nothing here
-                    }
-                }
+            if (!onlinePlayer.canSee(p)) continue;
+            if (!onlinePlayer.getWorld().equals(p.getWorld())) continue;
+            try {
+                ((CraftPlayer) p).getHandle().playerConnection.sendPacket(packet);
+            } catch (Exception ex) {
+                // Nothing here
             }
         }
     }
-    
+
     public void sendSit() {
-        for (String s : sit.keySet()) {            
-            Player p = getServer().getPlayer(s);
-            if (p != null) {
-                sendSit(p);
-            }
+        for (String s : sit.keySet()) {
+            final Player p = getServer().getPlayerExact(s);
+            if (p == null) return;
+            sendSit(p);
         }
     }
-    
+
     // Send stand packet to all online players
     public void sendStand(Player p) {
         if (sit.containsKey(p.getName())) {
-            if (notifyplayer && !msgStanding.isEmpty()) {                
-                p.sendMessage(msgStanding);
-            }
+            if (notifyplayer && !msgStanding.isEmpty()) p.sendMessage(msgStanding);
             sit.remove(p.getName());
-        }   
-        if (protocolManager != null) {
-            sendPacketToPlayers(getStandPacket(p),p);
-        } else {
-            Packet40EntityMetadata packet = new Packet40EntityMetadata(p.getPlayer().getEntityId(), new ChairWatcher((byte)0), false);
-            sendPacketToPlayers(packet,p);
+        }
+        if (protocolManager != null) sendPacketToPlayers(getStandPacket(p), p);
+        else {
+            Packet40EntityMetadata packet = new Packet40EntityMetadata(p.getPlayer().getEntityId(), new ChairWatcher((byte) 0), false);
+            sendPacketToPlayers(packet, p);
         }
     }
-    
+
     public void logInfo(String _message) {
         log.log(Level.INFO, String.format("%s %s", LOG_HEADER, _message));
     }
@@ -309,9 +292,9 @@ public class Chairs extends JavaPlugin {
     public void logError(String _message) {
         log.log(Level.SEVERE, String.format("%s %s", LOG_HEADER, _message));
     }
-    
+
     public static Chairs get() {
         return instance;
     }
-        
+
 }

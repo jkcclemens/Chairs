@@ -10,7 +10,6 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 /**
- *
  * @author cnaude
  */
 public class ChairsCommand implements CommandExecutor {
@@ -27,7 +26,7 @@ public class ChairsCommand implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
             return false;
-        } 
+        }
         if (args[0].equalsIgnoreCase("reload")) {
             if (sender.hasPermission("chairs.reload") || !(sender instanceof Player)) {
                 //plugin.reloadConfig();
